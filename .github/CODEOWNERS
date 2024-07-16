@@ -1,0 +1,4 @@
+# These owners will be the default owners for everything in
+# the repo; all owners will be requested for review for any
+# pull request.
+* @globalization-partners/devops-admin-team
