@@ -202,6 +202,12 @@ variable "create_multiple_public_route_tables" {
   default     = false
 }
 
+variable "create_public_igw_route" {
+  description = "Indicates whether to create a route for 0.0.0.0/0 to the IGW in public route table. Default: `true`"
+  type        = bool
+  default     = true
+}
+
 variable "public_subnet_ipv6_prefixes" {
   description = "Assigns IPv6 public subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list"
   type        = list(string)
