@@ -1,0 +1,53 @@
+---
+name: pull request
+
+# yamllint disable-line rule:truthy
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Validate commit messages, branch name, and PR title
+        uses: globalization-partners/infrastructure-live-action/validate-commit@main
+
+      - name: Checkout ${{ github.event.repository.name }}
+        uses: globalization-partners/infrastructure-live-action/checkout@main
+        with:
+          checkout-terraform-modules: false
+          checkout-devops-scripts: false
+
+      - name: Install Dependencies (Terraform, TFLint)
+        uses: globalization-partners/infrastructure-live-action/install-dependencies@main
+        with:
+          # Terraform and Terragrunt are installed by default
+          install-tflint: true
+          python-package-install-list: ''  # we don't need any python packages installed
+          setup-infra-modules-deploy-key: false  # deploy key is not required
+
+      - name: Check Terraform Config Formatting
+        working-directory: ${{ github.event.repository.name }}
+        run: terraform fmt -write=false -recursive
+
+      - name: Validate Terraform Configs
+        working-directory: ${{ github.event.repository.name }}
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+        run:
+          find . -name ".terraform" -prune -o -type f -name "*.tf"
+            -exec dirname {} \; |
+          sort -u |
+          while read m; do (
+            cd "$m" && terraform validate && tflint --minimum-failure-severity=error &&
+            echo "√ $m";
+          ) || {
+            touch check-failed;
+            echo "✗ $m";
+          }; done; [[ ! -f check-failed ]]

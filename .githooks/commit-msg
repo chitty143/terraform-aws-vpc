@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+# Note: using Python because the default shell toolset from MacOS does not support the functionality
+# we need to do the changes in the commit subject.
+# e.g. (s)ed doesn't support | for alternatives in regex
+#      awk doesn't support back references
+
+import re
+import subprocess
+import sys
+
+# The purpose of this script is to include the JIRA_ID in the commit subject if it is not already
+# present.
+# Example transformations:
+#   JIRA_ID commit subject       -> unchanged
+#   type: JIRA_ID commit subject -> unchanged
+#   commit subject               -> JIRA_ID commit subject
+#   type: commit subject         -> type: JIRA_ID commit subject
+
+# get the name of the current branch, and the JIRA ID from it
+current_branch = subprocess.check_output('git rev-parse --abbrev-ref HEAD', shell=True)
+jira_id = re.search('[A-Z]+-[0-9]+', current_branch.decode('utf-8')).group(0)
+
+if jira_id:
+    new_file_contents = None
+
+    with open(sys.argv[1]) as f:
+        commit_subject = f.readline()
+        matcher = re.search('^((feat|fix|docs): )?'+jira_id, commit_subject)
+        if matcher is None:
+            # the commit message does not begin with type: JIRA-ID or just JIRA-ID
+            # so we will add the JIRA ID to the subject
+            new_commit_subject = re.sub('^((feat|fix|docs): )?', r'\g<0>' + jira_id + ' ',
+                                        commit_subject)
+            print('Changing commit subject')
+            print(f'{commit_subject.strip()} -> {new_commit_subject.strip()}')
+            new_file_contents = new_commit_subject + f.read()
+
+    if new_file_contents is not None:
+        print('Writing new commit msg file', sys.argv[1])
+        with open(sys.argv[1], 'w') as f:
+            f.write(new_file_contents)
+else:
+    print('commit-msg: ignoring commit, current branch does not meet naming convention')
+    sys.exit(0)
