@@ -152,7 +152,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_route" "public_internet_gateway" {
-  count = var.create_public_igw_route && local.create_public_subnets && var.create_igw ? num_public_route_tables : 0
+  count = var.create_public_igw_route && local.create_public_subnets && var.create_igw ? local.num_public_route_tables : 0
 
   route_table_id         = aws_route_table.public[count.index].id
   destination_cidr_block = "0.0.0.0/0"
